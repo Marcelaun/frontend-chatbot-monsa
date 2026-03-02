@@ -8,7 +8,7 @@ const CONFIG = {
   logoUrl: 'https://ui-avatars.com/api/?name=OSC+MONSA&background=3c6bee&color=fff', 
   nomeOng: 'OSC MONSA',
   siglaOng: 'OM',
-  corPrincipalHex: '#3c6bee',
+  corPrincipalHex: '#4375ff',
   groqApiKey: groq_api_key
 };
 // ========================================================
