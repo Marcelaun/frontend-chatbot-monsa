@@ -1,127 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Camera, Check, X, UserCircle2 } from 'lucide-react';
 
+const groq_api_key = import.meta.env?.VITE_GROQ_API_KEY || '';
 
-const groq_api_key = import.meta.env.VITE_GROQ_API_KEY;
-// ================= CONFIGURAÇÕES GERAIS =================
 const CONFIG = {
   logoUrl: 'https://ui-avatars.com/api/?name=OSC+MONSA&background=3c6bee&color=fff', 
   nomeOng: 'OSC MONSA',
   siglaOng: 'OM',
-  corPrincipalHex: '#4375ff',
+  corPrincipalHex: '#3c6bee',
   groqApiKey: groq_api_key
 };
-// ========================================================
 
-// Sequência de perguntas reformulada com Múltiplos Campos e Máscaras
 const FLOW_SEQUENCE = [
-  { 
-    id: 'nome_responsavel', 
-    question: `Olá! Sou o assistente virtual do Centro Cultural ${CONFIG.nomeOng}. 🌻\n\nPrimeiramente, com quem eu estou falando?`, 
-    type: 'form', 
-    fields: [{ id: 'nome', label: 'Seu Nome Completo', placeholder: 'Digite seu nome' }] 
-  },
-  { 
-    id: 'nome_inscrito', 
-    question: (data) => `Prazer em te conhecer, ${data?.nome_responsavel?.split(' ')[0] || ''}! 😊\n\nQual é o nome completo da pessoa que será inscrita?`, 
-    type: 'form', 
-    fields: [{ id: 'nome', label: 'Nome do Inscrito', placeholder: 'Nome completo' }]
-  },
-  { 
-    id: 'data_nasc', 
-    question: 'Qual a data de nascimento do inscrito?', 
-    type: 'form',
-    fields: [{ id: 'data', label: 'Data de Nascimento', type: 'date' }]
-  },
-  { 
-    id: 'telefone', 
-    question: 'Por favor, me informe o seu número de WhatsApp com DDD.', 
-    type: 'form',
-    fields: [{ id: 'telefone', label: 'WhatsApp', placeholder: '(00) 00000-0000', mask: 'phone' }]
-  },
-  { 
-    id: 'endereco', 
-    question: 'Certo. Qual é o endereço completo? (Rua, Número, Bairro)', 
-    type: 'form', 
-    fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Rua, Número, Bairro' }]
-  },
-  { 
-    id: 'rg_cpf', 
-    question: 'Agora preciso dos números de RG e CPF.', 
-    type: 'form', 
-    fields: [
-      { id: 'rg', label: 'Número do RG', placeholder: 'Apenas números', mask: 'rg' },
-      { id: 'cpf', label: 'Número do CPF', placeholder: '000.000.000-00', mask: 'cpf' }
-    ]
-  },
-  { 
-    id: 'filiacao', 
-    question: 'Qual o nome da Filiação (Pai/Mãe/Responsável) e o CPF do responsável?', 
-    type: 'form', 
-    fields: [
-      { id: 'nome', label: 'Nome da Mãe/Pai ou Responsável', placeholder: 'Nome completo' },
-      { id: 'cpf', label: 'CPF do Responsável', placeholder: '000.000.000-00', mask: 'cpf' }
-    ]
-  },
-  { 
-    id: 'escolaridade', 
-    question: 'Sobre a escolaridade do inscrito: Qual o Ano, Turno e Escola?', 
-    type: 'form', 
-    fields: [
-      { id: 'ano', label: 'Série/Ano', placeholder: 'Ex: 5º Ano' },
-      { id: 'turno', label: 'Turno', placeholder: 'Ex: Matutino' },
-      { id: 'escola', label: 'Nome da Escola', placeholder: 'Ex: Escola Municipal...' }
-    ]
-  },
-  { 
-    id: 'familiares', 
-    question: 'Quais pessoas moram na mesma casa?\n(Pode digitar algo como: "Maria - Mãe, João - Irmão")', 
-    type: 'form', 
-    fields: [{ id: 'familiares', label: 'Moradores da residência', type: 'textarea', placeholder: 'Liste os moradores e parentesco' }]
-  },
-  { 
-    id: 'renda_auxilio', 
-    question: 'Qual a renda mensal da família e recebem algum auxílio do governo?', 
-    type: 'form', 
-    fields: [
-      { id: 'renda', label: 'Renda Mensal', placeholder: 'R$ 0,00', mask: 'money' },
-      { id: 'auxilio', label: 'Auxílio do Governo', placeholder: 'Ex: Bolsa Família ou "Nenhum"' }
-    ]
-  },
-  { 
-    id: 'saude', 
-    question: 'Alguém na família toma algum remédio controlado ou precisa de atenção à saúde?', 
-    type: 'form', 
-    fields: [{ id: 'saude', label: 'Atenção à saúde', type: 'textarea', placeholder: 'Descreva ou digite "Não"' }]
-  },
-  { 
-    id: 'expectativa', 
-    question: `Qual a sua expectativa no trabalho da ${CONFIG.nomeOng} com seu(sua) filho(a)?`, 
-    type: 'form', 
-    fields: [{ id: 'expectativa', label: 'Sua expectativa', type: 'textarea', placeholder: 'Digite sua expectativa' }]
-  },
-  { 
-    id: 'horta', 
-    question: 'A família tem horta ou árvore frutífera em casa?', 
-    type: 'options', 
-    options: ['Sim, temos', 'Não temos, mas tenho interesse', 'Não temos e sem interesse'] 
-  },
-  { 
-    id: 'cursos', 
-    question: 'Quais cursos de interesse você (responsável) tem vontade de fazer?', 
-    type: 'form', 
-    fields: [{ id: 'cursos', label: 'Cursos de interesse', placeholder: 'Ex: Corte e Costura, Informática...' }]
-  },
-  { 
-    id: 'foto_doc', 
-    question: 'Quase lá! 📸 Por favor, tire uma foto do documento (RG ou CPF) ou escolha na galeria.', 
-    type: 'file', accept: 'image/*' 
-  },
-  { 
-    id: 'foto_crianca', 
-    question: 'Ótimo! Agora, por favor, envie a foto da criança/inscrito.', 
-    type: 'file', accept: 'image/*' 
-  }
+  { id: 'nome_responsavel', question: `Olá! Sou o assistente virtual do Centro Cultural ${CONFIG.nomeOng}. 🌻\n\nPrimeiramente, com quem eu estou falando?`, type: 'form', fields: [{ id: 'nome', label: 'Seu Nome Completo', placeholder: 'Digite seu nome' }] },
+  { id: 'nome_inscrito', question: (data) => `Prazer em te conhecer, ${data?.nome_responsavel || ''}! 😊\n\nQual é o nome completo da pessoa que será inscrita?`, type: 'form', fields: [{ id: 'nome', label: 'Nome do Inscrito', placeholder: 'Nome completo' }]},
+  { id: 'data_nasc', question: 'Qual a data de nascimento do inscrito?', type: 'form', fields: [{ id: 'data', label: 'Data de Nascimento', type: 'date' }]},
+  { id: 'telefone', question: 'Por favor, me informe o seu número de WhatsApp com DDD.', type: 'form', fields: [{ id: 'telefone', label: 'WhatsApp', placeholder: '(00) 00000-0000', mask: 'phone' }]},
+  { id: 'endereco', question: 'Certo. Qual é o endereço completo? (Rua, Número, Bairro)', type: 'form', fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Rua, Número, Bairro' }]},
+  { id: 'rg_cpf', question: 'Agora preciso dos números de RG e CPF.', type: 'form', fields: [{ id: 'rg', label: 'Número do RG', placeholder: 'Apenas números', mask: 'rg' }, { id: 'cpf', label: 'Número do CPF', placeholder: '000.000.000-00', mask: 'cpf' }]},
+  { id: 'filiacao', question: 'Qual o nome da Filiação (Pai/Mãe/Responsável) e o CPF do responsável?', type: 'form', fields: [{ id: 'nome', label: 'Nome da Mãe/Pai ou Responsável', placeholder: 'Nome completo' }, { id: 'cpf', label: 'CPF do Responsável', placeholder: '000.000.000-00', mask: 'cpf' }]},
+  { id: 'escolaridade', question: 'Sobre a escolaridade do inscrito: Qual o Ano, Turno e Escola?', type: 'form', fields: [{ id: 'ano', label: 'Série/Ano', placeholder: 'Ex: 5º Ano' }, { id: 'turno', label: 'Turno', placeholder: 'Ex: Matutino' }, { id: 'escola', label: 'Nome da Escola', placeholder: 'Ex: Escola Municipal...' }]},
+  { id: 'familiares', question: 'Quais pessoas moram na mesma casa?\n(Pode digitar algo como: "Maria - Mãe, João - Irmão")', type: 'form', fields: [{ id: 'familiares', label: 'Moradores da residência', type: 'textarea', placeholder: 'Liste os moradores e parentesco' }]},
+  { id: 'renda_auxilio', question: 'Qual a renda mensal da família e recebem algum auxílio do governo?', type: 'form', fields: [{ id: 'renda', label: 'Renda Mensal', placeholder: 'R$ 0,00', mask: 'money' }, { id: 'auxilio', label: 'Auxílio do Governo', placeholder: 'Ex: Bolsa Família ou "Nenhum"' }]},
+  { id: 'saude', question: 'Alguém na família toma algum remédio controlado ou precisa de atenção à saúde?', type: 'form', fields: [{ id: 'saude', label: 'Atenção à saúde', type: 'textarea', placeholder: 'Descreva ou digite "Não"' }]},
+  { id: 'expectativa', question: `Qual a sua expectativa no trabalho da ${CONFIG.nomeOng} com seu(sua) filho(a)?`, type: 'form', fields: [{ id: 'expectativa', label: 'Sua expectativa', type: 'textarea', placeholder: 'Digite sua expectativa' }]},
+  { id: 'horta', question: 'A família tem horta ou árvore frutífera em casa?', type: 'options', options: ['Sim, temos', 'Não temos, mas tenho interesse', 'Não temos e sem interesse'] },
+  { id: 'cursos', question: 'Quais cursos de interesse você (responsável) tem vontade de fazer?', type: 'form', fields: [{ id: 'cursos', label: 'Cursos de interesse', placeholder: 'Ex: Corte e Costura, Informática...' }]},
+  { id: 'foto_doc', question: 'Quase lá! 📸 Por favor, tire uma foto do documento (RG ou CPF) ou escolha na galeria.', type: 'file', accept: 'image/*' },
+  { id: 'foto_crianca', question: 'Ótimo! Agora, por favor, envie a foto da criança/inscrito.', type: 'file', accept: 'image/*' }
 ];
 
 export default function App() {
@@ -130,7 +36,6 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
-  
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -141,7 +46,6 @@ export default function App() {
         const firstQ = FLOW_SEQUENCE[0].question;
         addBotMessage(typeof firstQ === 'function' ? firstQ({}) : firstQ);
       }, 1000);
-
       return () => clearTimeout(timer);
     }
   }, []);
@@ -154,53 +58,24 @@ export default function App() {
   const addUserMessage = (text) => setMessages((prev) => [...prev, { sender: 'user', text }]);
 
   const validateWithLLM = async (question, answer, expectedType) => {
-    if (!CONFIG.groqApiKey || CONFIG.groqApiKey === 'COLE_SUA_API_KEY_DO_GROQ_AQUI') {
-      console.warn("Chave do Groq não configurada. Aceitando resposta crua.");
-      return { valid: true, extracted_value: answer };
-    }
-
+    if (!CONFIG.groqApiKey) return { valid: true, extracted_value: answer };
     try {
-      const prompt = `Você é um avaliador restrito de dados de formulário.
-Pergunta feita pelo bot: "${question}"
-Resposta digitada pelo usuário: "${answer}"
-Tipo de campo esperado: ${expectedType}
-
-REGRAS OBRIGATÓRIAS:
-1. Verifique se a resposta faz sentido. Se não fizer sentido (ex: respondeu "não sei" para CPF ou Nome), defina valid como false e crie uma error_message amigável.
-2. EXTRAIA APENAS O VALOR LIMPO. 
-   - Se for NOME e a pessoa disser "Olá, eu sou o Marcelo Almeida", o valor extraído deve ser "Marcelo Almeida". 
-   - Se disser "Sou João", o valor é "João".
-   - Ignore saudações, pronomes e verbos ("me chamo", "sou o", etc).
-3. Seja estrito na limpeza do dado, queremos o dado puro para salvar no banco de dados.
-
-Retorne APENAS um JSON estrito neste formato:
-{ "valid": boolean, "extracted_value": "valor limpo extraído", "error_message": "mensagem de erro ou null" }`;
-
+      const prompt = `Extraia estritamente o valor da resposta: "${answer}" para a pergunta: "${question}". Tipo: ${expectedType}. Retorne JSON: { "valid": boolean, "extracted_value": "valor limpo", "error_message": "erro se invalido ou nulo" }`;
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${CONFIG.groqApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: "json_object" },
-          temperature: 0.1
-        })
+        headers: { 'Authorization': `Bearer ${CONFIG.groqApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], response_format: { type: "json_object" }, temperature: 0.1 })
       });
-
+      if (!response.ok) return { valid: true, extracted_value: answer };
       const data = await response.json();
       return JSON.parse(data.choices[0].message.content);
-    } catch (error) {
-      console.error("Erro na LLaMA:", error);
+    } catch {
       return { valid: true, extracted_value: answer }; 
     }
   };
 
   const handleNextStep = async (answerText, valueToSave, skipValidation = false) => {
     const stepData = FLOW_SEQUENCE[currentStep];
-    
     addUserMessage(answerText);
     setIsTyping(true);
 
@@ -208,31 +83,22 @@ Retorne APENAS um JSON estrito neste formato:
 
     if (!skipValidation) {
       const questionText = typeof stepData.question === 'function' ? stepData.question(formData) : stepData.question;
-      const expectedType = stepData.type === 'form' 
-        ? `Formulário com os campos: ${stepData.fields.map(f => f.label).join(', ')}` 
-        : stepData.type;
-
+      const expectedType = stepData.type === 'form' ? `Form: ${stepData.fields.map(f => f.label).join(', ')}` : stepData.type;
       const validationResult = await validateWithLLM(questionText, answerText, expectedType);
-
       if (!validationResult.valid) {
         setIsTyping(false);
         addBotMessage(`Hmm, acho que precisamos corrigir isso 🤔\n\n${validationResult.error_message}`);
         return; 
       }
-      
-      finalValueToSave = (stepData.type === 'form' && stepData.fields.length > 1) 
-        ? valueToSave 
-        : validationResult.extracted_value;
+      finalValueToSave = (stepData.type === 'form' && stepData.fields.length > 1) ? valueToSave : validationResult.extracted_value;
     }
 
     const newFormData = { ...formData, [stepData.id]: finalValueToSave };
     setFormData(newFormData);
-    
     const nextStep = currentStep + 1;
 
     if (nextStep < FLOW_SEQUENCE.length) {
       setCurrentStep(nextStep);
-      
       setTimeout(() => {
         setIsTyping(false);
         const nextQ = FLOW_SEQUENCE[nextStep].question;
@@ -241,36 +107,32 @@ Retorne APENAS um JSON estrito neste formato:
     } else {
       setTimeout(() => {
         setIsTyping(false);
-        addBotMessage(`Tudo certo com as informações e fotos, ${newFormData?.nome_responsavel?.split(' ')[0] || ''}! 🎉\n\n⚠️ **Aviso Importante:** Este é um pré-cadastro. Será necessária a presença do responsável na sede do Centro Cultural OSC MONSA para assinar o documento físico pessoalmente e validar a inscrição.\n\n📱 Você receberá a confirmação da sua pré-inscrição no seu WhatsApp em breve!`);
-        
+        addBotMessage(`Tudo certo com as informações e fotos, ${newFormData?.nome_responsavel || ''}! 🎉\n\n⚠️ **Aviso Importante:** Este é um pré-cadastro. Será necessária a presença do responsável na sede para assinar presencialmente.`);
         setTimeout(() => finishCadastro(newFormData), 6000);
       }, 1000);
     }
   };
 
-  // ================= GERADOR DE XML =================
   const generateXML = (data) => {
-    // Função para escapar caracteres especiais do XML
-    const escapeXml = (str) => String(str || '').replace(/[<>&'"]/g, (c) => {
-        return {'<': '&lt;', '>': '&gt;', '&': '&amp;', '\'': '&apos;', '"': '&quot;'}[c];
-    });
+    const escapeXml = (str) => String(str || '').replace(/[<>&'"]/g, (c) => ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '\'': '&apos;', '"': '&quot;'}[c]));
+    
+    // Pequena função para garantir que pegamos o texto, seja ele string direta ou dentro de um objeto
+    const getVal = (field, key) => typeof field === 'object' ? field?.[key] : field;
 
-    // Pega o texto dos familiares, divide por linhas (Enter) e cria uma tag <membro> pra cada um
-    const familiaresLinhas = (data.familiares?.familiares || '').split('\n').filter(line => line.trim() !== '');
-    const familiaresXml = familiaresLinhas.map(linha => 
-        // Como não temos os campos separados, jogamos a string inteira no "nome"
-        // Seu HTML já vai pegar isso e colocar na primeira coluna da tabela!
-        `<membro nome="${escapeXml(linha)}" parentesco="" dataNasc="" escolaridade="" ocupacao="" />`
-    ).join('\n            ');
+    const familiaresTexto = getVal(data.familiares, 'familiares') || '';
+    const familiaresLinhas = familiaresTexto.split('\n').filter(line => line.trim() !== '');
+    const familiaresXml = familiaresLinhas.map(linha => `<membro nome="${escapeXml(linha)}" parentesco="" dataNasc="" escolaridade="" ocupacao="" />`).join('\n            ');
+
+    const nomeCrianca = getVal(data.nome_inscrito, 'nome') || 'Sem_Nome';
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <cadastro>
     <ficha>
         <inscrito>
-            <nome>${escapeXml(data.nome_inscrito?.nome)}</nome>
-            <dataNascimento>${escapeXml(data.data_nasc?.data)}</dataNascimento>
-            <telefone>${escapeXml(data.telefone?.telefone)}</telefone>
-            <endereco>${escapeXml(data.endereco?.endereco)}</endereco>
+            <nome>${escapeXml(nomeCrianca)}</nome>
+            <dataNascimento>${escapeXml(getVal(data.data_nasc, 'data'))}</dataNascimento>
+            <telefone>${escapeXml(getVal(data.telefone, 'telefone'))}</telefone>
+            <endereco>${escapeXml(getVal(data.endereco, 'endereco'))}</endereco>
             <rg>${escapeXml(data.rg_cpf?.rg)}</rg>
             <cpf>${escapeXml(data.rg_cpf?.cpf)}</cpf>
             <filiacao>${escapeXml(data.filiacao?.nome)} / CPF: ${escapeXml(data.filiacao?.cpf)}</filiacao>
@@ -282,12 +144,12 @@ Retorne APENAS um JSON estrito neste formato:
         <socioeconomico>
             <rendaMensal>${escapeXml(data.renda_auxilio?.renda)}</rendaMensal>
             <auxilio>${escapeXml(data.renda_auxilio?.auxilio)}</auxilio>
-            <saudeFamiliar>${escapeXml(data.saude?.saude)}</saudeFamiliar>
+            <saudeFamiliar>${escapeXml(getVal(data.saude, 'saude'))}</saudeFamiliar>
             <oficinaDesejada></oficinaDesejada>
-            <expectativa>${escapeXml(data.expectativa?.expectativa)}</expectativa>
+            <expectativa>${escapeXml(getVal(data.expectativa, 'expectativa'))}</expectativa>
             <temHorta>${escapeXml(data.horta)}</temHorta>
             <interesseHorta>${escapeXml(data.horta)}</interesseHorta>
-            <cursosInteresse>${escapeXml(data.cursos?.cursos)}</cursosInteresse>
+            <cursosInteresse>${escapeXml(getVal(data.cursos, 'cursos'))}</cursosInteresse>
         </socioeconomico>
     </ficha>
 </cadastro>`;
@@ -295,302 +157,115 @@ Retorne APENAS um JSON estrito neste formato:
 
   const finishCadastro = async (finalData) => {
     setScreen('loading'); 
-
     try {
-      // 1. Gera a string em formato XML
       const xmlDocument = generateXML(finalData);
+      
+      const getVal = (field, key) => typeof field === 'object' ? field?.[key] : field;
+      const nomeCriancaStr = getVal(finalData.nome_inscrito, 'nome') || 'Inscrito_Novo';
 
-      // 2. Monta o pacote pra enviar pro n8n
       const payload = {
-        nome_arquivo: `Cadastro_MONSA_${finalData.nome_inscrito?.nome?.replace(/\s+/g, '_') || 'Novo'}.xml`,
+        nome_arquivo: `Cadastro_${nomeCriancaStr.replace(/\s+/g, '_')}.xml`,
+        nome_crianca: nomeCriancaStr, // Enviamos o nome limpo para o n8n criar a pasta!
         xml_data: xmlDocument,
         foto_documento_base64: finalData.foto_doc,
         foto_crianca_base64: finalData.foto_crianca,
-        telefone_contato: finalData.telefone?.telefone
+        telefone_contato: getVal(finalData.telefone, 'telefone')
       };
 
-      const WEBHOOK_URL = 'http://136.248.95.40:5678/webhook-test/monsa-cadastro';
-      
-      // Simulação. Substitua pelo fetch real:
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      await fetch(WEBHOOK_URL, {
+      const WEBHOOK_URL = 'https://autobackend.duckdns.org/webhook-test/monsa-cadastro';
+      const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
-      
+
+      if (!response.ok) throw new Error(`Erro: ${response.status}`);
       setScreen('success');
     } catch (error) {
-      alert('Ocorreu um erro ao enviar. Tente novamente.');
+      alert('Falha ao conectar. Verifique a rede.');
       setScreen('chat'); 
     }
   };
 
   const handleOptionSelect = (option) => handleNextStep(option, option, true);
-
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      handleNextStep(`📷 Arquivo anexado: ${file.name}`, reader.result, true);
-    };
+    reader.onloadend = () => handleNextStep(`📷 Arquivo anexado: ${file.name}`, reader.result, true);
     reader.readAsDataURL(file);
   };
 
-  if (screen === 'loading') {
-    return (
-      <div className="flex flex-col h-screen items-center justify-center bg-blue-700 text-white font-sans p-6 text-center">
-        <div className="custom-loader mb-6"></div>
-        <h2 className="text-2xl font-bold mb-2">Salvando Cadastro...</h2>
-        <p className="text-blue-100">Enviando seus documentos de forma segura para a ONG.</p>
-      </div>
-    );
-  }
-
-  if (screen === 'success') {
-    return (
-      <div className="flex flex-col h-screen items-center justify-center bg-gray-50 font-sans p-6 text-center animate-fade-in">
-        <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6">
-          <Check size={40} strokeWidth={3} />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Cadastro Realizado!</h2>
-        <p className="text-gray-600 mb-8 max-w-sm">
-          Agradecemos pelas informações. Seu pré-cadastro na {CONFIG.nomeOng} foi concluído com sucesso. Lembre-se de comparecer presencialmente para a assinatura.
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium shadow-md active:bg-blue-700 transition"
-        >
-          Novo Cadastro
-        </button>
-      </div>
-    );
-  }
+  if (screen === 'loading') return <div className="flex flex-col h-screen items-center justify-center bg-blue-700 text-white font-sans p-6 text-center"><div className="custom-loader mb-6"></div><h2 className="text-2xl font-bold mb-2">Salvando Cadastro...</h2><p className="text-blue-100">Enviando seus documentos de forma segura.</p></div>;
+  if (screen === 'success') return <div className="flex flex-col h-screen items-center justify-center bg-gray-50 font-sans p-6 text-center animate-fade-in"><div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6"><Check size={40} strokeWidth={3} /></div><h2 className="text-2xl font-bold text-gray-800 mb-2">Cadastro Realizado!</h2><p className="text-gray-600 mb-8 max-w-sm">Seu pré-cadastro na {CONFIG.nomeOng} foi concluído. Lembre-se de assinar presencialmente.</p><button onClick={() => window.location.reload()} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium shadow-md active:bg-blue-700 transition">Novo Cadastro</button></div>;
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-gray-50 font-sans">
-      <style>{`
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .typing-dot {
-          width: 6px; height: 6px; background-color: #9ca3af; border-radius: 50%;
-          animation: typingBounce 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0s; }
-        @keyframes typingBounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-        .custom-loader {
-          width: 50px; height: 50px; border: 4px solid rgba(255, 255, 255, 0.3);
-          border-radius: 50%; border-top-color: #ffffff; animation: spin 1s ease-in-out infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
-
+      <style>{`.animate-fade-in{animation: fadeIn 0.4s ease-out forwards;}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.typing-dot{width:6px;height:6px;background-color:#9ca3af;border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out both}.typing-dot:nth-child(1){animation-delay:-0.32s}.typing-dot:nth-child(2){animation-delay:-0.16s}.typing-dot:nth-child(3){animation-delay:0s}@keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}.custom-loader{width:50px;height:50px;border:4px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:#ffffff;animation:spin 1s ease-in-out infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <header className="bg-blue-700 text-white p-4 shadow-md flex items-center shrink-0 z-10 relative">
-        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-700 font-bold mr-3 shadow-sm overflow-hidden shrink-0">
-          <img src={CONFIG.logoUrl} alt="Logo" className="w-full h-full object-cover" />
-        </div>
-        <div>
-          <h1 className="font-bold text-lg leading-tight">{CONFIG.nomeOng}</h1>
-          <p className="text-xs text-blue-100 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
-            Online
-          </p>
-        </div>
+        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-700 font-bold mr-3 shadow-sm overflow-hidden shrink-0"><img src={CONFIG.logoUrl} alt="Logo" className="w-full h-full object-cover" /></div>
+        <div><h1 className="font-bold text-lg leading-tight">{CONFIG.nomeOng}</h1><p className="text-xs text-blue-100 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Online</p></div>
       </header>
-
       <main className="flex-1 overflow-y-auto p-4 space-y-4 relative">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.sender === 'bot' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
-            {msg.sender === 'bot' && (
-              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 shrink-0 self-end mb-1 overflow-hidden">
-                 <img src={CONFIG.logoUrl} alt="Bot" className="w-full h-full object-cover opacity-80" />
-              </div>
-            )}
-            <div 
-              className={`max-w-[80%] rounded-2xl p-3 text-sm shadow-sm ${
-                msg.sender === 'bot' 
-                  ? 'bg-white text-gray-800 rounded-bl-none border border-gray-100 whitespace-pre-line' 
-                  : 'bg-blue-600 text-white rounded-br-none'
-              }`}
-            >
-              {msg.text}
-            </div>
+            {msg.sender === 'bot' && <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 shrink-0 self-end mb-1 overflow-hidden"><img src={CONFIG.logoUrl} alt="Bot" className="w-full h-full object-cover opacity-80" /></div>}
+            <div className={`max-w-[80%] rounded-2xl p-3 text-sm shadow-sm ${msg.sender === 'bot' ? 'bg-white text-gray-800 rounded-bl-none border border-gray-100 whitespace-pre-line' : 'bg-blue-600 text-white rounded-br-none'}`}>{msg.text}</div>
           </div>
         ))}
-
-        {isTyping && (
-           <div className="flex justify-start animate-fade-in">
-             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 shrink-0 self-end mb-1 overflow-hidden">
-                <img src={CONFIG.logoUrl} alt="Bot" className="w-full h-full object-cover opacity-80" />
-              </div>
-             <div className="bg-white rounded-2xl rounded-bl-none py-3 px-4 shadow-sm border border-gray-100 flex items-center space-x-1 min-h-[44px]">
-               <div className="typing-dot"></div>
-               <div className="typing-dot"></div>
-               <div className="typing-dot"></div>
-             </div>
-           </div>
-        )}
+        {isTyping && <div className="flex justify-start animate-fade-in"><div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 shrink-0 self-end mb-1 overflow-hidden"><img src={CONFIG.logoUrl} alt="Bot" className="w-full h-full object-cover opacity-80" /></div><div className="bg-white rounded-2xl rounded-bl-none py-3 px-4 shadow-sm border border-gray-100 flex items-center space-x-1 min-h-[44px]"><div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div></div></div>}
         <div ref={messagesEndRef} />
       </main>
-
       {currentStep < FLOW_SEQUENCE.length && !isTyping && (
         <footer className="bg-white p-3 border-t border-gray-200 shrink-0 animate-fade-in">
-          <InputResolver 
-            stepData={FLOW_SEQUENCE[currentStep]} 
-            handleNextStep={handleNextStep}
-            handleOptionSelect={handleOptionSelect}
-            handleFileUpload={handleFileUpload}
-          />
+          <InputResolver stepData={FLOW_SEQUENCE[currentStep]} handleNextStep={handleNextStep} handleOptionSelect={handleOptionSelect} handleFileUpload={handleFileUpload} />
         </footer>
       )}
     </div>
   );
 }
 
-// ================= COMPONENTE DE INPUTS MULTIPLOS E MÁSCARAS =================
 function InputResolver({ stepData, handleNextStep, handleOptionSelect, handleFileUpload }) {
   const [localValues, setLocalValues] = useState({});
-
-  useEffect(() => {
-    setLocalValues({});
-  }, [stepData]);
+  useEffect(() => setLocalValues({}), [stepData]);
 
   const applyMask = (value, mask) => {
     if (!value) return '';
-    if (mask === 'cpf') {
-      let v = value.replace(/\D/g, '');
-      v = v.replace(/(\d{3})(\d)/, '$1.$2');
-      v = v.replace(/(\d{3})(\d)/, '$1.$2');
-      v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-      return v.slice(0, 14);
-    }
-    if (mask === 'phone') {
-      let v = value.replace(/\D/g, '');
-      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-      v = v.replace(/(\d)(\d{4})$/, '$1-$2');
-      return v.slice(0, 15);
-    }
-    if (mask === 'rg') {
-      let v = value.replace(/[^a-zA-Z0-9]/g, '');
-      return v.toUpperCase().slice(0, 14);
-    }
-    if (mask === 'money') {
-      let v = value.replace(/\D/g, '');
-      if (!v) return '';
-      v = (parseInt(v, 10) / 100).toFixed(2);
-      v = v.replace('.', ',');
-      v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-      return 'R$ ' + v;
-    }
+    if (mask === 'cpf') { let v = value.replace(/\D/g, ''); v = v.replace(/(\d{3})(\d)/, '$1.$2'); v = v.replace(/(\d{3})(\d)/, '$1.$2'); v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2'); return v.slice(0, 14); }
+    if (mask === 'phone') { let v = value.replace(/\D/g, ''); v = v.replace(/^(\d{2})(\d)/g, '($1) $2'); v = v.replace(/(\d)(\d{4})$/, '$1-$2'); return v.slice(0, 15); }
+    if (mask === 'rg') { return value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 14); }
+    if (mask === 'money') { let v = value.replace(/\D/g, ''); if (!v) return ''; v = (parseInt(v, 10) / 100).toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.'); return 'R$ ' + v; }
     return value;
   };
 
-  const handleChange = (fieldId, value, mask) => {
-    setLocalValues(prev => ({ ...prev, [fieldId]: applyMask(value, mask) }));
-  };
-
+  const handleChange = (fieldId, value, mask) => setLocalValues(prev => ({ ...prev, [fieldId]: applyMask(value, mask) }));
+  
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    const isAllFilled = stepData.fields.every(f => localValues[f.id] && localValues[f.id].trim() !== '');
-    if (!isAllFilled) return;
-
-    let answerText = '';
-    let valueToSave = null;
-
-    if (stepData.fields.length === 1) {
-      answerText = localValues[stepData.fields[0].id];
-      valueToSave = localValues[stepData.fields[0].id];
-    } else {
-      answerText = stepData.fields.map(f => `${f.label}: ${localValues[f.id]}`).join('\n');
-      valueToSave = localValues;
-    }
-
+    if (!stepData.fields.every(f => localValues[f.id] && localValues[f.id].trim() !== '')) return;
+    let answerText = stepData.fields.length === 1 ? localValues[stepData.fields[0].id] : stepData.fields.map(f => `${f.label}: ${localValues[f.id]}`).join('\n');
+    let valueToSave = stepData.fields.length === 1 ? localValues[stepData.fields[0].id] : localValues;
     handleNextStep(answerText, valueToSave, false);
   };
 
-  if (stepData.type === 'options') {
-    return (
-      <div className="flex flex-col gap-2">
-        {stepData.options.map((opt, i) => (
-          <button 
-            key={i} 
-            onClick={() => handleOptionSelect(opt)}
-            className="w-full py-3 bg-blue-50 text-blue-800 rounded-xl border border-blue-200 font-medium active:bg-blue-100 transition"
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  if (stepData.type === 'file') {
-    return (
-      <div className="flex flex-col items-center">
-        <label className="w-full py-4 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 font-medium cursor-pointer shadow-md active:bg-blue-700 transition">
-          <Camera size={20} />
-          Tirar Foto / Anexar
-          <input type="file" accept={stepData.accept} className="hidden" onChange={handleFileUpload} />
-        </label>
-        <p className="text-xs text-gray-500 mt-2 text-center">Tire uma foto nítida em local iluminado.</p>
-      </div>
-    );
-  }
-
+  if (stepData.type === 'options') return <div className="flex flex-col gap-2">{stepData.options.map((opt, i) => <button key={i} onClick={() => handleOptionSelect(opt)} className="w-full py-3 bg-blue-50 text-blue-800 rounded-xl border border-blue-200 font-medium active:bg-blue-100 transition">{opt}</button>)}</div>;
+  if (stepData.type === 'file') return <div className="flex flex-col items-center"><label className="w-full py-4 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 font-medium cursor-pointer shadow-md active:bg-blue-700 transition"><Camera size={20} />Tirar Foto / Anexar<input type="file" accept={stepData.accept} className="hidden" onChange={handleFileUpload} /></label><p className="text-xs text-gray-500 mt-2 text-center">Tire uma foto nítida em local iluminado.</p></div>;
   if (stepData.type === 'form') {
     const isSingleField = stepData.fields.length === 1 && stepData.fields[0].type !== 'textarea';
     const isAllFilled = stepData.fields.every(f => localValues[f.id] && localValues[f.id].trim() !== '');
-
     return (
       <form onSubmit={handleFormSubmit} className={`flex ${isSingleField ? 'flex-row items-end gap-2' : 'flex-col gap-3'} w-full`}>
         <div className={`flex flex-col gap-3 ${isSingleField ? 'flex-1' : 'w-full'}`}>
           {stepData.fields.map((field) => (
             <div key={field.id} className="flex flex-col">
                {field.label && !isSingleField && <span className="text-xs font-semibold text-blue-800 ml-1 mb-1">{field.label}</span>}
-               {field.type === 'textarea' ? (
-                  <textarea
-                    value={localValues[field.id] || ''}
-                    onChange={(e) => handleChange(field.id, e.target.value, field.mask)}
-                    placeholder={field.placeholder || field.label}
-                    className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none w-full"
-                    rows={2}
-                    autoFocus={stepData.fields[0].id === field.id}
-                  />
-               ) : (
-                  <input
-                    type={field.type || 'text'}
-                    value={localValues[field.id] || ''}
-                    onChange={(e) => handleChange(field.id, e.target.value, field.mask)}
-                    placeholder={field.placeholder || field.label}
-                    className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full"
-                    autoFocus={stepData.fields[0].id === field.id}
-                  />
-               )}
+               {field.type === 'textarea' ? <textarea value={localValues[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value, field.mask)} placeholder={field.placeholder || field.label} className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none w-full" rows={2} autoFocus={stepData.fields[0].id === field.id} /> : <input type={field.type || 'text'} value={localValues[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value, field.mask)} placeholder={field.placeholder || field.label} className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full" autoFocus={stepData.fields[0].id === field.id} />}
             </div>
           ))}
         </div>
-        <button 
-          type="submit" 
-          disabled={!isAllFilled}
-          className={`bg-blue-600 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:bg-gray-400 transition ${isSingleField ? 'w-12 h-12 rounded-full' : 'w-full py-4 rounded-xl font-bold gap-2 mt-1'}`}
-        >
-          {isSingleField ? <Send size={18} className="ml-1" /> : <><Check size={20}/> Confirmar Dados</>}
-        </button>
+        <button type="submit" disabled={!isAllFilled} className={`bg-blue-600 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:bg-gray-400 transition ${isSingleField ? 'w-12 h-12 rounded-full' : 'w-full py-4 rounded-xl font-bold gap-2 mt-1'}`}>{isSingleField ? <Send size={18} className="ml-1" /> : <><Check size={20}/> Confirmar Dados</>}</button>
       </form>
     );
   }
-
   return null;
 }
