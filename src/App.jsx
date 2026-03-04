@@ -16,7 +16,7 @@ const FLOW_SEQUENCE = [
   { id: 'nome_inscrito', question: (data) => `Prazer em te conhecer, ${data?.nome_responsavel || ''}! 😊\n\nQual é o nome completo da pessoa que será inscrita?`, type: 'form', fields: [{ id: 'nome', label: 'Nome do Inscrito', placeholder: 'Nome completo' }]},
   { id: 'data_nasc', question: 'Qual a data de nascimento do inscrito?', type: 'form', fields: [{ id: 'data', label: 'Data de Nascimento', type: 'date' }]},
   { id: 'telefone', question: 'Por favor, me informe o seu número de WhatsApp com DDD.', type: 'form', fields: [{ id: 'telefone', label: 'WhatsApp', placeholder: '(00) 00000-0000', mask: 'phone' }]},
-  { id: 'endereco', question: 'Certo. Qual é o endereço completo? (Rua, Número, Bairro)', type: 'form', fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Rua, Número, Bairro' }]},
+  { id: 'endereco', question: 'Certo. Qual é o endereço completo? (Rua, Número, Bairro)', type: 'form', fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Exemplo: Rua Trazibulo Jason, 1143, Bairro São Pedro' }]},
   { id: 'rg_cpf', question: 'Agora preciso dos números de RG e CPF.', type: 'form', fields: [{ id: 'rg', label: 'Número do RG', placeholder: 'Apenas números', mask: 'rg' }, { id: 'cpf', label: 'Número do CPF', placeholder: '000.000.000-00', mask: 'cpf' }]},
   { id: 'filiacao', question: 'Qual o nome da Filiação (Pai/Mãe/Responsável) e o CPF do responsável?', type: 'form', fields: [{ id: 'nome', label: 'Nome da Mãe/Pai ou Responsável', placeholder: 'Nome completo' }, { id: 'cpf', label: 'CPF do Responsável', placeholder: '000.000.000-00', mask: 'cpf' }]},
   { id: 'escolaridade', question: 'Sobre a escolaridade do inscrito: Qual o Ano, Turno e Escola?', type: 'form', fields: [{ id: 'ano', label: 'Série/Ano', placeholder: 'Ex: 5º Ano' }, { id: 'turno', label: 'Turno', placeholder: 'Ex: Matutino' }, { id: 'escola', label: 'Nome da Escola', placeholder: 'Ex: Escola Municipal...' }]},
@@ -60,7 +60,18 @@ export default function App() {
   const validateWithLLM = async (question, answer, expectedType) => {
     if (!CONFIG.groqApiKey) return { valid: true, extracted_value: answer };
     try {
-      const prompt = `Extraia estritamente o valor da resposta: "${answer}" para a pergunta: "${question}". Tipo: ${expectedType}. Retorne JSON: { "valid": boolean, "extracted_value": "valor limpo", "error_message": "erro se invalido ou nulo" }`;
+      const prompt = `Você é um assistente de extração de dados.
+Pergunta do bot: "${question}"
+Resposta do usuário: "${answer}"
+Tipo esperado: ${expectedType}
+
+Regras OBRIGATÓRIAS:
+1. Se o usuário digitar um valor direto (ex: só o nome "João Augusto Pereira", só a data "15/05/2012"), considere VÁLIDO (valid: true).
+2. Extraia o dado limpo em "extracted_value" (sem saudações). Se a resposta for apenas o nome, o "extracted_value" é esse nome exato.
+3. Invalide APENAS se for uma recusa clara (ex: "não sei"), um texto sem sentido ou não responder ao que foi pedido.
+4. Retorne APENAS um JSON válido.
+
+Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error_message": null }`;
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${CONFIG.groqApiKey}`, 'Content-Type': 'application/json' },
