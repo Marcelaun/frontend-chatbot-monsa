@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Camera, Check, X, UserCircle2 } from 'lucide-react';
+import { Send, Camera, Check, X, UserCircle2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
-const groq_api_key = import.meta.env?.VITE_GROQ_API_KEY || '';
+let groq_api_key = '';
+try {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    groq_api_key = import.meta.env.VITE_GROQ_API_KEY || '';
+  }
+} catch (e) {
+  console.warn("Ambiente não suporta import.meta nativamente.");
+}
 
 const CONFIG = {
   logoUrl: 'https://ui-avatars.com/api/?name=OSC+MONSA&background=3c6bee&color=fff', 
@@ -12,22 +19,22 @@ const CONFIG = {
 };
 
 const FLOW_SEQUENCE = [
-  { id: 'nome_responsavel', question: `Olá! Sou o assistente virtual do Centro Cultural ${CONFIG.nomeOng}. 🌻\n\nPrimeiramente, com quem eu estou falando?`, type: 'form', fields: [{ id: 'nome', label: 'Seu Nome Completo', placeholder: 'Digite seu nome' }] },
-  { id: 'nome_inscrito', question: (data) => `Prazer em te conhecer, ${data?.nome_responsavel || ''}! 😊\n\nQual é o nome completo da pessoa que será inscrita?`, type: 'form', fields: [{ id: 'nome', label: 'Nome do Inscrito', placeholder: 'Nome completo' }]},
+  { id: 'nome_responsavel', question: `Olá! Sou o assistente virtual do Centro Cultural ${CONFIG.nomeOng}. Primeiramente, com quem eu estou falando?`, type: 'form', fields: [{ id: 'nome', label: 'Seu Nome Completo', placeholder: 'Digite seu nome' }] },
+  { id: 'nome_inscrito', question: (data) => `Prazer em te conhecer, ${data?.nome_responsavel || ''}! Qual é o nome completo da pessoa que será inscrita?`, type: 'form', fields: [{ id: 'nome', label: 'Nome do Inscrito', placeholder: 'Nome completo' }]},
   { id: 'data_nasc', question: 'Qual a data de nascimento do inscrito?', type: 'form', fields: [{ id: 'data', label: 'Data de Nascimento', type: 'date' }]},
   { id: 'telefone', question: 'Por favor, me informe o seu número de WhatsApp com DDD.', type: 'form', fields: [{ id: 'telefone', label: 'WhatsApp', placeholder: '(00) 00000-0000', mask: 'phone' }]},
-  { id: 'endereco', question: 'Certo. Qual é o endereço completo? (Rua, Número, Bairro)', type: 'form', fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Exemplo: Rua Trazibulo Jason, 1143, Bairro São Pedro' }]},
-  { id: 'rg_cpf', question: 'Agora preciso dos números de RG e CPF.', type: 'form', fields: [{ id: 'rg', label: 'Número do RG', placeholder: 'Apenas números', mask: 'rg' }, { id: 'cpf', label: 'Número do CPF', placeholder: '000.000.000-00', mask: 'cpf' }]},
-  { id: 'filiacao', question: 'Qual o nome da Filiação (Pai/Mãe/Responsável) e o CPF do responsável?', type: 'form', fields: [{ id: 'nome', label: 'Nome da Mãe/Pai ou Responsável', placeholder: 'Nome completo' }, { id: 'cpf', label: 'CPF do Responsável', placeholder: '000.000.000-00', mask: 'cpf' }]},
+  { id: 'endereco', question: 'Certo. Qual é o endereço completo? Rua, Número e Bairro.', type: 'form', fields: [{ id: 'endereco', label: 'Endereço', type: 'textarea', placeholder: 'Rua, Número, Bairro' }]},
+  { id: 'rg_cpf', question: 'Agora preciso dos números de RG e CPF do inscrito.', type: 'form', fields: [{ id: 'rg', label: 'Número do RG', placeholder: 'Apenas números', mask: 'rg' }, { id: 'cpf', label: 'Número do CPF', placeholder: '000.000.000-00', mask: 'cpf' }]},
+  { id: 'filiacao', question: 'Qual o nome da Filiação (Pai, Mãe ou Responsável) e o CPF do responsável?', type: 'form', fields: [{ id: 'nome', label: 'Nome da Mãe/Pai ou Responsável', placeholder: 'Nome completo' }, { id: 'cpf', label: 'CPF do Responsável', placeholder: '000.000.000-00', mask: 'cpf' }]},
   { id: 'escolaridade', question: 'Sobre a escolaridade do inscrito: Qual o Ano, Turno e Escola?', type: 'form', fields: [{ id: 'ano', label: 'Série/Ano', placeholder: 'Ex: 5º Ano' }, { id: 'turno', label: 'Turno', placeholder: 'Ex: Matutino' }, { id: 'escola', label: 'Nome da Escola', placeholder: 'Ex: Escola Municipal...' }]},
-  { id: 'familiares', question: 'Quais pessoas moram na mesma casa?\n(Pode digitar algo como: "Maria - Mãe, João - Irmão")', type: 'form', fields: [{ id: 'familiares', label: 'Moradores da residência', type: 'textarea', placeholder: 'Liste os moradores e parentesco' }]},
+  { id: 'familiares', question: 'Quais pessoas moram na mesma casa? Pode ditar os nomes e parentescos.', type: 'form', fields: [{ id: 'familiares', label: 'Moradores da residência', type: 'textarea', placeholder: 'Liste os moradores e parentesco' }]},
   { id: 'renda_auxilio', question: 'Qual a renda mensal da família e recebem algum auxílio do governo?', type: 'form', fields: [{ id: 'renda', label: 'Renda Mensal', placeholder: 'R$ 0,00', mask: 'money' }, { id: 'auxilio', label: 'Auxílio do Governo', placeholder: 'Ex: Bolsa Família ou "Nenhum"' }]},
   { id: 'saude', question: 'Alguém na família toma algum remédio controlado ou precisa de atenção à saúde?', type: 'form', fields: [{ id: 'saude', label: 'Atenção à saúde', type: 'textarea', placeholder: 'Descreva ou digite "Não"' }]},
-  { id: 'expectativa', question: `Qual a sua expectativa no trabalho da ${CONFIG.nomeOng} com seu(sua) filho(a)?`, type: 'form', fields: [{ id: 'expectativa', label: 'Sua expectativa', type: 'textarea', placeholder: 'Digite sua expectativa' }]},
+  { id: 'expectativa', question: `Qual a sua expectativa no trabalho da ${CONFIG.nomeOng} com seu filho ou filha?`, type: 'form', fields: [{ id: 'expectativa', label: 'Sua expectativa', type: 'textarea', placeholder: 'Digite sua expectativa' }]},
   { id: 'horta', question: 'A família tem horta ou árvore frutífera em casa?', type: 'options', options: ['Sim, temos', 'Não temos, mas tenho interesse', 'Não temos e sem interesse'] },
-  { id: 'cursos', question: 'Quais cursos de interesse você (responsável) tem vontade de fazer?', type: 'form', fields: [{ id: 'cursos', label: 'Cursos de interesse', placeholder: 'Ex: Corte e Costura, Informática...' }]},
-  { id: 'foto_doc', question: 'Quase lá! 📸 Por favor, tire uma foto do documento (RG ou CPF) ou escolha na galeria.', type: 'file', accept: 'image/*' },
-  { id: 'foto_crianca', question: 'Ótimo! Agora, por favor, envie a foto da criança/inscrito.', type: 'file', accept: 'image/*' }
+  { id: 'cursos', question: 'Quais cursos de interesse você tem vontade de fazer?', type: 'form', fields: [{ id: 'cursos', label: 'Cursos de interesse', placeholder: 'Ex: Corte e Costura, Informática...' }]},
+  { id: 'foto_doc', question: 'Quase lá! Por favor, tire uma foto do documento, RG ou CPF, ou escolha na galeria.', type: 'file', accept: 'image/*' },
+  { id: 'foto_crianca', question: 'Ótimo! Agora, por favor, envie a foto da criança inscrita.', type: 'file', accept: 'image/*' }
 ];
 
 export default function App() {
@@ -36,7 +43,25 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Estado para controlar a voz do Bot
+  const [isVoiceBotEnabled, setIsVoiceBotEnabled] = useState(false);
+
   const messagesEndRef = useRef(null);
+
+  // Função para o bot falar (TTS)
+  const speakText = (text) => {
+    if (!isVoiceBotEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // Para qualquer fala anterior
+    
+    // Remove emojis e markdown simples para a leitura ficar limpa
+    const cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{2700}-\u{27BF}]/gu, '').replace(/\*/g, '');
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.05; // Velocidade ligeiramente mais rápida e natural
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -54,8 +79,25 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, currentStep, isTyping]);
 
-  const addBotMessage = (text) => setMessages((prev) => [...prev, { sender: 'bot', text }]);
+  const addBotMessage = (text) => {
+    setMessages((prev) => [...prev, { sender: 'bot', text }]);
+    speakText(text); // Aciona a voz sempre que o bot envia mensagem
+  };
+
   const addUserMessage = (text) => setMessages((prev) => [...prev, { sender: 'user', text }]);
+
+  const toggleBotVoice = () => {
+    const newState = !isVoiceBotEnabled;
+    setIsVoiceBotEnabled(newState);
+    if (!newState) {
+      window.speechSynthesis.cancel(); // Cala a boca do bot se o usuário desligar
+    } else {
+      // Pequeno feedback avisando que ligou
+      const utterance = new SpeechSynthesisUtterance("Voz ativada.");
+      utterance.lang = 'pt-BR';
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   const validateWithLLM = async (question, answer, expectedType) => {
     if (!CONFIG.groqApiKey) return { valid: true, extracted_value: answer };
@@ -66,12 +108,12 @@ Resposta do usuário: "${answer}"
 Tipo esperado: ${expectedType}
 
 Regras OBRIGATÓRIAS:
-1. Se o usuário digitar um valor direto (ex: só o nome "João Augusto Pereira", só a data "15/05/2012"), considere VÁLIDO (valid: true).
-2. Extraia o dado limpo em "extracted_value" (sem saudações). Se a resposta for apenas o nome, o "extracted_value" é esse nome exato.
-3. Invalide APENAS se for uma recusa clara (ex: "não sei"), um texto sem sentido ou não responder ao que foi pedido.
+1. Se o usuário digitar/falar um valor direto (ex: só o nome, só a data), considere VÁLIDO.
+2. Extraia o dado limpo em "extracted_value".
+3. Invalide APENAS se for uma recusa clara, sem sentido ou se não responder ao pedido.
 4. Retorne APENAS um JSON válido.
+Exemplo: { "valid": true, "extracted_value": "valor extraído", "error_message": null }`;
 
-Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error_message": null }`;
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${CONFIG.groqApiKey}`, 'Content-Type': 'application/json' },
@@ -118,7 +160,7 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
     } else {
       setTimeout(() => {
         setIsTyping(false);
-        addBotMessage(`Tudo certo com as informações e fotos, ${newFormData?.nome_responsavel || ''}! 🎉\n\n⚠️ **Aviso Importante:** Este é um pré-cadastro. Será necessária a presença do responsável na sede para assinar presencialmente.`);
+        addBotMessage(`Tudo certo com as informações e fotos, ${newFormData?.nome_responsavel || ''}! 🎉\n\nAviso Importante: Este é um pré-cadastro. Será necessária a presença do responsável na sede para assinar presencialmente.`);
         setTimeout(() => finishCadastro(newFormData), 6000);
       }, 1000);
     }
@@ -126,9 +168,7 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
 
   const generateXML = (data) => {
     const escapeXml = (str) => String(str || '').replace(/[<>&'"]/g, (c) => ({'<': '&lt;', '>': '&gt;', '&': '&amp;', '\'': '&apos;', '"': '&quot;'}[c]));
-    
-    // Pequena função para garantir que pegamos o texto, seja ele string direta ou dentro de um objeto
-    const getVal = (field, key) => typeof field === 'object' ? field?.[key] : field;
+    const getVal = (field, key) => typeof field === 'object' && field !== null ? field[key] : field;
 
     const familiaresTexto = getVal(data.familiares, 'familiares') || '';
     const familiaresLinhas = familiaresTexto.split('\n').filter(line => line.trim() !== '');
@@ -170,13 +210,12 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
     setScreen('loading'); 
     try {
       const xmlDocument = generateXML(finalData);
-      
-      const getVal = (field, key) => typeof field === 'object' ? field?.[key] : field;
+      const getVal = (field, key) => typeof field === 'object' && field !== null ? field[key] : field;
       const nomeCriancaStr = getVal(finalData.nome_inscrito, 'nome') || 'Inscrito_Novo';
 
       const payload = {
         nome_arquivo: `Cadastro_${nomeCriancaStr.replace(/\s+/g, '_')}.xml`,
-        nome_crianca: nomeCriancaStr, // Enviamos o nome limpo para o n8n criar a pasta!
+        nome_crianca: nomeCriancaStr,
         xml_data: xmlDocument,
         foto_documento_base64: finalData.foto_doc,
         foto_crianca_base64: finalData.foto_crianca,
@@ -213,10 +252,30 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
   return (
     <div className="flex flex-col h-screen max-h-screen bg-gray-50 font-sans">
       <style>{`.animate-fade-in{animation: fadeIn 0.4s ease-out forwards;}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.typing-dot{width:6px;height:6px;background-color:#9ca3af;border-radius:50%;animation:typingBounce 1.4s infinite ease-in-out both}.typing-dot:nth-child(1){animation-delay:-0.32s}.typing-dot:nth-child(2){animation-delay:-0.16s}.typing-dot:nth-child(3){animation-delay:0s}@keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}.custom-loader{width:50px;height:50px;border:4px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:#ffffff;animation:spin 1s ease-in-out infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <header className="bg-blue-700 text-white p-4 shadow-md flex items-center shrink-0 z-10 relative">
-        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-700 font-bold mr-3 shadow-sm overflow-hidden shrink-0"><img src={CONFIG.logoUrl} alt="Logo" className="w-full h-full object-cover" /></div>
-        <div><h1 className="font-bold text-lg leading-tight">{CONFIG.nomeOng}</h1><p className="text-xs text-blue-100 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Online</p></div>
+      
+      <header className="bg-blue-700 text-white p-4 shadow-md flex items-center justify-between shrink-0 z-10 relative">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-700 font-bold mr-3 shadow-sm overflow-hidden shrink-0">
+            <img src={CONFIG.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg leading-tight">{CONFIG.nomeOng}</h1>
+            <p className="text-xs text-blue-100 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Online
+            </p>
+          </div>
+        </div>
+        
+        {/* Botão de Ligar/Desligar Voz do Bot */}
+        <button 
+          onClick={toggleBotVoice}
+          className={`p-2 rounded-full transition-colors ${isVoiceBotEnabled ? 'bg-blue-600 text-white' : 'bg-blue-800 text-blue-300'}`}
+          title={isVoiceBotEnabled ? "Desativar voz do bot" : "Ativar voz do bot"}
+        >
+          {isVoiceBotEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </button>
       </header>
+
       <main className="flex-1 overflow-y-auto p-4 space-y-4 relative">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.sender === 'bot' ? 'justify-start' : 'justify-end'} animate-fade-in`}>
@@ -227,6 +286,7 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
         {isTyping && <div className="flex justify-start animate-fade-in"><div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 shrink-0 self-end mb-1 overflow-hidden"><img src={CONFIG.logoUrl} alt="Bot" className="w-full h-full object-cover opacity-80" /></div><div className="bg-white rounded-2xl rounded-bl-none py-3 px-4 shadow-sm border border-gray-100 flex items-center space-x-1 min-h-[44px]"><div className="typing-dot"></div><div className="typing-dot"></div><div className="typing-dot"></div></div></div>}
         <div ref={messagesEndRef} />
       </main>
+
       {currentStep < FLOW_SEQUENCE.length && !isTyping && (
         <footer className="bg-white p-3 border-t border-gray-200 shrink-0 animate-fade-in">
           <InputResolver stepData={FLOW_SEQUENCE[currentStep]} handleNextStep={handleNextStep} handleOptionSelect={handleOptionSelect} handleFileUpload={handleFileUpload} />
@@ -236,8 +296,11 @@ Exemplo de saída: { "valid": true, "extracted_value": "valor extraído", "error
   );
 }
 
+// Componente Responsável por Inputs de Texto, Voz, Opções e Fotos
 function InputResolver({ stepData, handleNextStep, handleOptionSelect, handleFileUpload }) {
   const [localValues, setLocalValues] = useState({});
+  const [listeningField, setListeningField] = useState(null); // Identifica qual campo está ouvindo
+
   useEffect(() => setLocalValues({}), [stepData]);
 
   const applyMask = (value, mask) => {
@@ -251,6 +314,43 @@ function InputResolver({ stepData, handleNextStep, handleOptionSelect, handleFil
 
   const handleChange = (fieldId, value, mask) => setLocalValues(prev => ({ ...prev, [fieldId]: applyMask(value, mask) }));
   
+  // ================= DIGITAÇÃO POR VOZ (STT) =================
+  const toggleSpeechToText = (fieldId, currentMask) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Seu navegador não suporta digitação por voz. Tente usar o Google Chrome.");
+      return;
+    }
+
+    // Se já estiver escutando o mesmo campo, para.
+    if (listeningField === fieldId) {
+      setListeningField(null);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false; // Para assim que a pessoa parar de falar
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setListeningField(fieldId);
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const currentValue = localValues[fieldId] || '';
+      // Adiciona o que foi falado (com um espaço se já houver texto)
+      const newValue = currentValue ? `${currentValue} ${transcript}` : transcript;
+      handleChange(fieldId, newValue, currentMask);
+      setListeningField(null);
+    };
+
+    recognition.onerror = () => setListeningField(null);
+    recognition.onend = () => setListeningField(null);
+
+    recognition.start();
+  };
+  // ===========================================================
+
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (!stepData.fields.every(f => localValues[f.id] && localValues[f.id].trim() !== '')) return;
@@ -261,20 +361,57 @@ function InputResolver({ stepData, handleNextStep, handleOptionSelect, handleFil
 
   if (stepData.type === 'options') return <div className="flex flex-col gap-2">{stepData.options.map((opt, i) => <button key={i} onClick={() => handleOptionSelect(opt)} className="w-full py-3 bg-blue-50 text-blue-800 rounded-xl border border-blue-200 font-medium active:bg-blue-100 transition">{opt}</button>)}</div>;
   if (stepData.type === 'file') return <div className="flex flex-col items-center"><label className="w-full py-4 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 font-medium cursor-pointer shadow-md active:bg-blue-700 transition"><Camera size={20} />Tirar Foto / Anexar<input type="file" accept={stepData.accept} className="hidden" onChange={handleFileUpload} /></label><p className="text-xs text-gray-500 mt-2 text-center">Tire uma foto nítida em local iluminado.</p></div>;
+  
   if (stepData.type === 'form') {
     const isSingleField = stepData.fields.length === 1 && stepData.fields[0].type !== 'textarea';
     const isAllFilled = stepData.fields.every(f => localValues[f.id] && localValues[f.id].trim() !== '');
+    
     return (
       <form onSubmit={handleFormSubmit} className={`flex ${isSingleField ? 'flex-row items-end gap-2' : 'flex-col gap-3'} w-full`}>
         <div className={`flex flex-col gap-3 ${isSingleField ? 'flex-1' : 'w-full'}`}>
           {stepData.fields.map((field) => (
-            <div key={field.id} className="flex flex-col">
+            <div key={field.id} className="flex flex-col relative">
                {field.label && !isSingleField && <span className="text-xs font-semibold text-blue-800 ml-1 mb-1">{field.label}</span>}
-               {field.type === 'textarea' ? <textarea value={localValues[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value, field.mask)} placeholder={field.placeholder || field.label} className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none w-full" rows={2} autoFocus={stepData.fields[0].id === field.id} /> : <input type={field.type || 'text'} value={localValues[field.id] || ''} onChange={(e) => handleChange(field.id, e.target.value, field.mask)} placeholder={field.placeholder || field.label} className="bg-gray-100 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full" autoFocus={stepData.fields[0].id === field.id} />}
+               
+               <div className="relative flex items-center w-full">
+                 {field.type === 'textarea' ? (
+                    <textarea 
+                      value={localValues[field.id] || ''} 
+                      onChange={(e) => handleChange(field.id, e.target.value, field.mask)} 
+                      placeholder={field.placeholder || field.label} 
+                      className="bg-gray-100 border-none rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none w-full" 
+                      rows={2} 
+                      autoFocus={stepData.fields[0].id === field.id} 
+                    />
+                 ) : (
+                    <input 
+                      type={field.type || 'text'} 
+                      value={localValues[field.id] || ''} 
+                      onChange={(e) => handleChange(field.id, e.target.value, field.mask)} 
+                      placeholder={field.placeholder || field.label} 
+                      className="bg-gray-100 border-none rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full" 
+                      autoFocus={stepData.fields[0].id === field.id} 
+                    />
+                 )}
+                 
+                 {/* Botão de Microfone embutido no input */}
+                 {field.type !== 'date' && (
+                   <button 
+                     type="button" 
+                     onClick={() => toggleSpeechToText(field.id, field.mask)}
+                     className={`absolute right-3 p-1.5 rounded-full transition-all ${listeningField === field.id ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 hover:text-blue-600 hover:bg-gray-200'}`}
+                     title="Falar em vez de digitar"
+                   >
+                     {listeningField === field.id ? <Mic size={18} /> : <MicOff size={18} />}
+                   </button>
+                 )}
+               </div>
             </div>
           ))}
         </div>
-        <button type="submit" disabled={!isAllFilled} className={`bg-blue-600 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:bg-gray-400 transition ${isSingleField ? 'w-12 h-12 rounded-full' : 'w-full py-4 rounded-xl font-bold gap-2 mt-1'}`}>{isSingleField ? <Send size={18} className="ml-1" /> : <><Check size={20}/> Confirmar Dados</>}</button>
+        <button type="submit" disabled={!isAllFilled} className={`bg-blue-600 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:bg-gray-400 transition ${isSingleField ? 'w-12 h-12 rounded-full' : 'w-full py-4 rounded-xl font-bold gap-2 mt-1'}`}>
+          {isSingleField ? <Send size={18} className="ml-1" /> : <><Check size={20}/> Confirmar Dados</>}
+        </button>
       </form>
     );
   }
