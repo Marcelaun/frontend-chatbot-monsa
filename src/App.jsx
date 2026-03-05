@@ -243,7 +243,7 @@ Exemplo: { "valid": true, "extracted_value": "valor extraído", "error_message":
         telefone_contato: getVal(finalData.telefone, 'telefone')
       };
 
-      const WEBHOOK_URL = 'https://autobackend.duckdns.org/webhook-test/monsa-cadastro';
+      const WEBHOOK_URL = 'https://autobackend.duckdns.org/webhook/monsa-cadastro';
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
