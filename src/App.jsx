@@ -316,7 +316,7 @@ Resposta do usuário: "${answer}"
 Tipo esperado: ${expectedType}
 
 Regras OBRIGATÓRIAS:
-1. Se o usuário digitar/falar um valor direto (ex: só o nome, só a data), considere VÁLIDO.
+1. Se o usuário digitar/falar um valor direto (ex: só o nome, só a data), considere VÁLIDO, mas se ele digitar o nome após uma frase também considere válido mas extraia só o nome.
 2. Extraia o dado limpo em "extracted_value".
 3. Invalide APENAS se for uma recusa clara, sem sentido ou se não responder ao pedido.
 4. Retorne APENAS um JSON válido.
