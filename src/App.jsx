@@ -876,7 +876,7 @@ function InputResolver({
           className={`bg-blue-600 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:bg-gray-400 transition ${isSingleField ? "w-12 h-12 rounded-full" : "w-full py-4 rounded-xl font-bold gap-2 mt-1"}`}
         >
           {isSingleField ? (
-            <Send size={18} className="ml-1" />
+            <Send size={17} className="ml-1" />
           ) : (
             <>
               <Check size={20} /> Confirmar Dados
